@@ -1,6 +1,6 @@
 // pages/index/index.js
 const app = getApp()
-import { getPrompt } from '../../utils/api'
+import { getPrompt, searchPOI, classifyLetter, submitLetter } from '../../utils/api'
 
 let msgId = 0
 function nextId() { return 'm' + (++msgId) }
@@ -13,7 +13,11 @@ Page({
     keyboardHeight: 0,
     msgListTop: 100,
     msgListBottom: 120,
-    inputBarBottom: 60
+    inputBarBottom: 60,
+    // 提交弹窗
+    showSubmitDialog: false,
+    submitDraft: {},
+    draftName: '', draftPhone: '', draftIdCard: '', draftCategory: '', draftDesc: ''
   },
 
   onLoad() {
@@ -44,23 +48,15 @@ Page({
     const info = wx.getSystemInfoSync()
     const ww = info.windowWidth
     const rpx = function(r) { return r * ww / 750 }
-
-    // 导航栏高度: padding-top(safe top + 32rpx) + title(36rpx) + subtitle(24rpx + 4rpx margin) + padding-bottom(24rpx)
     const safeTop = info.safeArea ? info.safeArea.top : info.statusBarHeight || 0
     const navH = safeTop + rpx(32 + 36 + 4 + 24 + 24)
-
-    // 输入栏高度: padding-top(16rpx) + input(80rpx) + padding-bottom(16rpx) + border-top + safe-bottom
     const safeBottom = info.safeArea ? (info.screenHeight - info.safeArea.bottom) : 0
     const inputH = rpx(16 + 80 + 16) + safeBottom + 2
-
-    // Tab bar 高度
     const tabH = rpx(112) + safeBottom
-
     this._navH = navH
     this._inputH = inputH
     this._tabH = tabH
     this._safeBottom = safeBottom
-
     this.setData({
       msgListTop: navH,
       msgListBottom: inputH + tabH - safeBottom,
@@ -73,10 +69,7 @@ Page({
       const kbH = res.height
       this.setData({ keyboardHeight: kbH })
       if (kbH > 0) {
-        this.setData({
-          inputBarBottom: kbH,
-          msgListBottom: this._inputH + kbH
-        })
+        this.setData({ inputBarBottom: kbH, msgListBottom: this._inputH + kbH })
         setTimeout(() => this.scrollToBottom(), 150)
       } else {
         const tabH = this._tabH || 60
@@ -110,26 +103,53 @@ Page({
     })
   },
 
+  // ===================== 初始化 =====================
+
   async initChat() {
+    const defaultPrompt = '你是一个乐于助人的AI助手，请用中文回答用户的问题。'
     try {
       const res = await getPrompt()
-      const text = (res && res.data && (res.data.content || (typeof res.data === 'string' ? res.data : ''))) || '您好！我是民意智感AI助手，请问有什么可以帮助您的？'
-      this.addMessage('assistant', text)
-    } catch {
+      const basePrompt = (res && res.prompt) || defaultPrompt
+      // 非流式模式下，LLM 倾向于直接问用户而不是调用工具
+      // 在前面强制加上工具命令使用提示
+      this._systemPrompt = `【重要工具命令规则】你可以使用以下工具命令来搜索信息，请写在回复中：\n- :["map-search", "地点名称"] 搜索地址和单位\n- :["classify", "描述内容"] 对信件内容进行分类\n如果需要查询地址、单位、路段、分类等信息，必须使用工具命令搜索，严禁直接反问用户。\n\n${basePrompt}`
+      console.log('[Init] prompt长度:', (this._systemPrompt || '').length)
+      this.addMessage('assistant', '您好！我是民意智感AI助手，请问有什么可以帮助您的？')
+    } catch (e) {
+      console.error('[Init] prompt加载失败:', e)
+      this._systemPrompt = defaultPrompt
       this.addMessage('assistant', '您好！我是民意智感AI助手，请问有什么可以帮助您的？')
     }
   },
 
+  // ===================== 消息管理 =====================
+
   addMessage(role, content, actions) {
     const now = new Date()
     const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-    const msg = { id: nextId(), role, content, time }
+    const msg = { id: nextId(), role, content, time, hasActions: !!(actions && actions.length) }
     if (actions) msg.actions = actions
     this.data.messages.push(msg)
     this.setData({ messages: this.data.messages })
     this.scrollToBottom()
     return msg
   },
+
+  updateLastAssistantMsg(content, actions) {
+    const msgs = this.data.messages
+    const last = msgs[msgs.length - 1]
+    if (last && last.role === 'assistant') {
+      last.content = content
+      last.hasActions = !!(actions && actions.length)
+      if (actions) last.actions = actions
+      this.setData({ messages: msgs })
+    } else {
+      this.addMessage('assistant', content, actions)
+    }
+    this.scrollToBottom()
+  },
+
+  // ===================== 发送消息 =====================
 
   quickAsk(e) {
     const text = e.currentTarget.dataset.text
@@ -152,89 +172,253 @@ Page({
 
     this.setData({ loading: true, inputValue: '' })
     this.addMessage('user', content)
+    this._toolCommandCount = 0
 
     try {
-      const apiMessages = this.data.messages.map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content
-      }))
-
-      const token = app.globalData.token
-      const header = { 'Content-Type': 'application/json' }
-      if (token) header['Authorization'] = 'Bearer ' + token
-
-      const res = await new Promise((resolve, reject) => {
-        wx.request({
-          url: app.globalData.baseUrl + '/chat/completions',
-          method: 'POST',
-          header,
-          timeout: 10000,
-          data: { 
-            messages: apiMessages,
-            stream: false
-          },
-          success: resolve,
-          fail: reject
-        })
-      })
-
-      if (res.statusCode === 200 && res.data) {
-        let reply = ''
-        if (res.data.choices && res.data.choices[0]) {
-          reply = res.data.choices[0].message?.content || res.data.choices[0].text || ''
-        } else if (res.data.data) {
-          reply = res.data.data.reply || res.data.data.content || res.data.data.message || ''
-        } else if (res.data.reply) {
-          reply = res.data.reply
-        } else if (res.data.content) {
-          reply = res.data.content
-        } else if (res.data.message) {
-          reply = res.data.message
-        }
-        
-        if (typeof reply !== 'string') {
-          reply = JSON.stringify(reply)
-        }
-        
-        if (reply) {
-          this.addMessage('assistant', reply)
-        } else {
-          this.addMessage('assistant', '抱歉，我没有理解您的问题，请重新描述一下。')
-        }
-      } else {
-        this.mockReply(content)
-      }
+      await this.doChatAndProcess()
     } catch (e) {
       console.error('Chat error:', e)
-      this.mockReply(content)
+      this.addMessage('assistant', '抱歉，网络异常，请重试。')
     }
     this.setData({ loading: false })
   },
 
-  mockReply(content) {
-    const replies = [
-      '您好！我已收到您的问题，让我为您查询一下相关信息。',
-      '感谢您的咨询，这个问题我可以帮您解答。',
-      '明白了，关于您提到的这个问题，我建议您可以尝试以下方法...',
-      '好的，我来为您详细说明一下。',
-      '收到！这是一个很好的问题，让我为您解答。'
-    ]
-    const randomReply = replies[Math.floor(Math.random() * replies.length)]
-    this.addMessage('assistant', randomReply + '\n\n【提示：当前使用的是演示模式，如需连接真实AI服务，请配置正确的服务器地址】')
+  // 构建并发送请求 → 处理工具命令 → 提取草稿
+  async doChatAndProcess(extraSystemMsg) {
+    // 构建消息列表
+    const apiMessages = [{ role: 'system', content: this._systemPrompt }]
+    if (extraSystemMsg) {
+      apiMessages.push({ role: 'system', content: extraSystemMsg })
+    }
+    this.data.messages.forEach(m => {
+      if (m.role === 'user' || m.role === 'assistant') {
+        apiMessages.push({ role: m.role, content: m.content })
+      }
+    })
+
+    const reply = await this.callChatAPI(apiMessages)
+    if (!reply) {
+      this.addMessage('assistant', '抱歉，我没有理解您的问题，请重新描述一下。')
+      return
+    }
+
+    // 检查工具命令
+    const toolResult = await this.processToolCommands(reply)
+    if (toolResult) {
+      // 有工具命令，将结果回传 AI 继续对话
+      await this.doChatAndProcess(
+        `工具执行结果：\n${toolResult}\n\n请根据以上结果继续处理。`
+      )
+      return
+    }
+
+    // 最终回复：提取草稿、检查是否建议提交
+    this.processAIResponse(reply)
   },
 
-  updateLastAssistantMsg(content, actions) {
-    const msgs = this.data.messages
-    const last = msgs[msgs.length - 1]
-    if (last && last.role === 'assistant') {
-      last.content = content
-      if (actions) last.actions = actions
-      this.setData({ messages: msgs })
-    } else {
-      this.addMessage('assistant', content, actions)
-    }
-    this.scrollToBottom()
+  // 调用聊天 API
+  callChatAPI(messages) {
+    return new Promise((resolve, reject) => {
+      const header = { 'Content-Type': 'application/json' }
+      const token = app.globalData.token
+      if (token) header['Authorization'] = 'Bearer ' + token
+
+      wx.request({
+        url: app.globalData.baseUrl + '/chat',
+        method: 'POST',
+        header,
+        timeout: 60000,
+        data: { messages, stream: false },
+        success(res) {
+          if (res.statusCode === 200 && res.data) {
+            let reply = res.data.reply || res.data.content || res.data.message || ''
+            if (res.data.choices && res.data.choices[0]) {
+              reply = res.data.choices[0].message?.content || res.data.choices[0].text || ''
+            }
+            if (typeof reply !== 'string') reply = JSON.stringify(reply)
+            resolve(reply)
+          } else {
+            resolve('')
+          }
+        },
+        fail(err) { reject(err) }
+      })
+    })
   },
+
+  // ===================== 工具命令处理（与 Web 端一致）=====================
+
+  async processToolCommands(content) {
+    const regex = /:\["(map-search|classify)",\s*"([^"]+)"\]/g
+    const commands = [...content.matchAll(regex)]
+    console.log('[Tool] 检查工具命令:', commands.length, '个')
+    if (commands.length === 0) return null
+
+    // 防止无限循环
+    this._toolCommandCount++
+    if (this._toolCommandCount > 3) {
+      console.warn('工具命令执行次数过多，停止')
+      return null
+    }
+
+    // 从回复内容中移除命令文本
+    const cleanContent = content.replace(regex, '').trim()
+    const lastMsg = this.data.messages[this.data.messages.length - 1]
+    if (lastMsg && lastMsg.role === 'assistant') {
+      lastMsg.content = cleanContent
+    }
+
+    const results = []
+    for (const [, command, param] of commands) {
+      const result = await this.executeToolCommand(command, param)
+      if (result) results.push(result)
+    }
+    return results.length > 0 ? results.join('\n') : null
+  },
+
+  async executeToolCommand(command, param) {
+    try {
+      if (command === 'map-search') {
+        const res = await searchPOI(param)
+        const pois = (res && res.pois) || []
+        if (pois.length > 0) {
+          const poi = pois[0]
+          return `[map-search结果] 查询"${param}"结果：${poi.name}，地址：${poi.address}，坐标：${poi.location}`
+        }
+        return `[map-search结果] 未找到"${param}"的相关信息`
+      }
+      if (command === 'classify') {
+        const res = await classifyLetter({ 描述: param })
+        const data = (res && res.data) || {}
+        if (data['一级分类']) {
+          return `[classify结果] 分类建议：${data['一级分类'] || ''}/${data['二级分类'] || ''}/${data['三级分类'] || ''}`
+        }
+        return `[classify结果] 分类分析完成`
+      }
+    } catch (e) {
+      return `[${command}错误] ${e.message || '执行失败'}`
+    }
+    return null
+  },
+
+  // ===================== AI 回复处理（与 Web 端一致）=====================
+
+  processAIResponse(content) {
+    const submitMatch = content.match(/建议提交信件|生成信件|生成信件格式|信件已经为您准备好/)
+    const hasData = content.includes('姓名') && content.includes('描述')
+    const draft = this.extractDraft(content)
+
+    if (submitMatch) {
+      // 补全缺失字段（与 Web 端一致）
+      if (!draft['姓名']) draft['姓名'] = (content.match(/群众姓名[|:：]\s*([^|\n]+)/) || content.match(/姓名[|:：]\s*([^|\n]+)/) || [''])[1]?.trim() || ''
+      if (!draft['描述']) draft['描述'] = (content.match(/描述[|:：]\s*([^|\n]+(?:\n[^|\n]+)*)/) || [''])[1]?.trim() || ''
+      this.setData({
+        showSubmitDialog: true,
+        submitDraft: draft,
+        draftName: draft['姓名'] || '（未填写）',
+        draftPhone: draft['手机号'] || '（未填写）',
+        draftIdCard: draft['身份证号'] || '（未填写）',
+        draftCategory: [draft['一级分类'], draft['二级分类'], draft['三级分类']].filter(Boolean).join(' / ') || '（未填写）',
+        draftDesc: draft['描述'] || '（未填写）'
+      })
+    }
+
+    if (draft && Object.keys(draft).length > 0) {
+      const actions = [{
+        label: '填写信件', type: 'fillForm', data: draft
+      }]
+      this.updateLastAssistantMsg(content, actions)
+    } else if (hasData) {
+      // 宽松检查：内容有姓名和描述但 regex 没提取到，也给按钮
+      const actions = [{
+        label: '填写信件', type: 'fillForm', data: draft
+      }]
+      this.updateLastAssistantMsg(content, actions)
+    } else {
+      this.addMessage('assistant', content)
+    }
+  },
+
+  extractDraft(content) {
+    const draft = {}
+    const patterns = [
+      { key: '姓名', regex: /姓名[：:]\s*([^\n,，]+)/ },
+      { key: '手机号', regex: /手机号?[：:]\s*(\d{11})/ },
+      { key: '身份证号', regex: /身份证[：:]\s*(\d{17}[\dXx])/ },
+      { key: '一级分类', regex: /一级分类[：:]\s*([^\n,，]+)/ },
+      { key: '二级分类', regex: /二级分类[：:]\s*([^\n,，]+)/ },
+      { key: '三级分类', regex: /三级分类[：:]\s*([^\n,，]+)/ },
+      { key: '描述', regex: /描述[：:]\s*([\s\S]+?)(?=\n\n|\n###|$)/ }
+    ]
+    for (const { key, regex } of patterns) {
+      const match = content.match(regex)
+      if (match) draft[key] = match[1].trim()
+    }
+    // 兼容 markdown 表格
+    const tableRowRegex = /\|\s*([^|]+)\s*\|\s*([^|]+)\s*(?:\|)?/g
+    let tableMatch
+    while ((tableMatch = tableRowRegex.exec(content)) !== null) {
+      const label = tableMatch[1].trim()
+      const value = tableMatch[2].trim()
+      if (!value || value === '-') continue
+      if (label.includes('分类')) {
+        const parts = value.split('/').map(s => s.trim()).filter(Boolean)
+        if (parts.length >= 1 && !draft['一级分类']) draft['一级分类'] = parts[0]
+        if (parts.length >= 2 && !draft['二级分类']) draft['二级分类'] = parts[1]
+        if (parts.length >= 3 && !draft['三级分类']) draft['三级分类'] = parts[2]
+      } else if (label.includes('姓名') && !draft['姓名']) {
+        draft['姓名'] = value
+      } else if ((label.includes('手机') || label.includes('电话')) && !draft['手机号']) {
+        draft['手机号'] = value
+      } else if (label.includes('身份证') && !draft['身份证号']) {
+        draft['身份证号'] = value
+      } else if (label.includes('描述') || label.includes('诉求')) {
+        draft['描述'] = value
+      }
+    }
+    return draft
+  },
+
+  // ===================== 提交弹窗 =====================
+
+  closeSubmitDialog() {
+    this.setData({ showSubmitDialog: false })
+  },
+
+  handleEditDraft() {
+    app.globalData.formData = this.mapDraftToForm(this.data.submitDraft)
+    this.setData({ showSubmitDialog: false })
+    wx.switchTab({ url: '/pages/write/write' })
+  },
+
+  // 将 AI 提取的中文 key 映射到写信页的英文字段
+  mapDraftToForm(draft) {
+    return {
+      citizen_name: draft['姓名'] || '',
+      phone: draft['手机号'] || '',
+      id_card: draft['身份证号'] || '',
+      content: draft['描述'] || ''
+    }
+  },
+
+  async handleSubmitDraft() {
+    try {
+      const formData = this.mapDraftToForm(this.data.submitDraft)
+      const res = await submitLetter(formData)
+      const letterNo = (res && (res.letter_no || (res.data && res.data.letter_no))) || ''
+      if (letterNo) {
+        this.addMessage('assistant', `✅ 信件已成功提交！信件编号：**${letterNo}**`)
+      } else {
+        const err = (res && res.error) || '未知错误'
+        this.addMessage('assistant', `❌ 提交失败：${err}`)
+      }
+    } catch (e) {
+      this.addMessage('assistant', `❌ 提交失败：${e.message || '网络错误'}`)
+    }
+    this.setData({ showSubmitDialog: false, submitDraft: {}, draftName: '', draftPhone: '', draftIdCard: '', draftCategory: '', draftDesc: '' })
+  },
+
+  // ===================== 消息操作 =====================
 
   handleAction(e) {
     const action = e.currentTarget.dataset.action
@@ -245,8 +429,10 @@ Page({
     } else if (action.type === 'navigate') {
       wx.navigateTo({ url: action.url })
     } else if (action.type === 'fillForm') {
-      app.globalData.formData = action.data || {}
+      app.globalData.formData = this.mapDraftToForm(action.data || {})
       wx.switchTab({ url: '/pages/write/write' })
     }
-  }
+  },
+
+  noop() {}
 })

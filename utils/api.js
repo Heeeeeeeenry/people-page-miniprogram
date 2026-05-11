@@ -21,7 +21,11 @@ function request(url, method = 'GET', data = {}) {
           reject(new Error('未登录'))
           return
         }
-        resolve(res.data)
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(res.data)
+        } else {
+          reject(new Error(res.data?.error || `HTTP ${res.statusCode}`))
+        }
       },
       fail(err) { reject(err) }
     })
@@ -63,6 +67,12 @@ export function getCurrentUser() {
 
 export function getPrompt() {
   return request('/prompt')
+}
+
+// ===== 工具 =====
+
+export function searchPOI(keywords) {
+  return request('/amap/poi/search?keywords=' + encodeURIComponent(keywords))
 }
 
 // ===== 信件 =====

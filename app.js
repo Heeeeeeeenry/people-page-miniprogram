@@ -57,6 +57,6 @@ App({
     token: '',
     wxOpenid: '',
     needBindPhone: false,
-    baseUrl: 'http://10.25.65.177:8081/api'
+    baseUrl: 'http://192.168.3.15:8081/api'
   }
 })

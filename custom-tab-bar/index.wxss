@@ -1,0 +1,262 @@
+/* custom-tab-bar/index.wxss - 现代化自定义 TabBar */
+
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(112rpx + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 999;
+}
+
+.tab-bar-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20rpx);
+  border-top: 1rpx solid rgba(226, 232, 240, 0.6);
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+.tab-bar-content {
+  position: relative;
+  display: flex;
+  height: 112rpx;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.tab-icon-wrapper {
+  position: relative;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8rpx;
+}
+
+.tab-icon {
+  width: 48rpx;
+  height: 48rpx;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.tab-icon.active {
+  transform: scale(1.1);
+}
+
+.tab-indicator {
+  position: absolute;
+  bottom: -8rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 2rpx;
+  animation: indicatorSlide 0.3s ease;
+}
+
+@keyframes indicatorSlide {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 40rpx;
+    opacity: 1;
+  }
+}
+
+.tab-text {
+  font-size: 22rpx;
+  color: #94a3b8;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.tab-item.active .tab-text {
+  color: #6366f1;
+  font-weight: 600;
+}
+
+/* AI助手图标 - 聊天气泡 */
+.icon-chat {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.chat-bubble {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 40rpx;
+  height: 32rpx;
+  background: #94a3b8;
+  border-radius: 12rpx;
+  transition: all 0.3s ease;
+}
+
+.chat-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6rpx;
+  left: 8rpx;
+  width: 0;
+  height: 0;
+  border-left: 6rpx solid transparent;
+  border-right: 6rpx solid transparent;
+  border-top: 8rpx solid #94a3b8;
+  transition: all 0.3s ease;
+}
+
+.tab-item.active .chat-bubble {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.tab-item.active .chat-bubble::after {
+  border-top-color: #6366f1;
+}
+
+.chat-dots {
+  position: absolute;
+  top: 14rpx;
+  left: 10rpx;
+  display: flex;
+  gap: 4rpx;
+}
+
+.chat-dots .dot {
+  width: 4rpx;
+  height: 4rpx;
+  background: #fff;
+  border-radius: 50%;
+}
+
+/* 写信图标 - 纸笔 */
+.icon-write {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.write-paper {
+  position: absolute;
+  top: 6rpx;
+  left: 6rpx;
+  width: 32rpx;
+  height: 40rpx;
+  background: #94a3b8;
+  border-radius: 4rpx;
+  transition: all 0.3s ease;
+}
+
+.write-paper::before {
+  content: '';
+  position: absolute;
+  top: 10rpx;
+  left: 6rpx;
+  width: 20rpx;
+  height: 2rpx;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 1rpx;
+}
+
+.write-paper::after {
+  content: '';
+  position: absolute;
+  top: 18rpx;
+  left: 6rpx;
+  width: 14rpx;
+  height: 2rpx;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 1rpx;
+}
+
+.write-pen {
+  position: absolute;
+  top: 2rpx;
+  right: 4rpx;
+  width: 16rpx;
+  height: 16rpx;
+  background: #94a3b8;
+  border-radius: 0 8rpx 0 0;
+  transform: rotate(45deg);
+  transition: all 0.3s ease;
+}
+
+.write-pen::after {
+  content: '';
+  position: absolute;
+  bottom: -4rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4rpx solid transparent;
+  border-right: 4rpx solid transparent;
+  border-top: 6rpx solid #94a3b8;
+}
+
+.tab-item.active .write-paper,
+.tab-item.active .write-pen {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.tab-item.active .write-pen::after {
+  border-top-color: #6366f1;
+}
+
+/* 我的图标 - 用户 */
+.icon-profile {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.profile-head {
+  position: absolute;
+  top: 4rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20rpx;
+  height: 20rpx;
+  background: #94a3b8;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.profile-body {
+  position: absolute;
+  bottom: 4rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36rpx;
+  height: 18rpx;
+  background: #94a3b8;
+  border-radius: 18rpx 18rpx 0 0;
+  transition: all 0.3s ease;
+}
+
+.tab-item.active .profile-head,
+.tab-item.active .profile-body {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}

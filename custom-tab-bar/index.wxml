@@ -1,0 +1,30 @@
+<!--custom-tab-bar/index.wxml-->
+<view class="tab-bar safe-bottom">
+  <view class="tab-bar-bg"></view>
+  <view class="tab-bar-content">
+    <view wx:for="{{list}}" wx:key="index" class="tab-item {{selected === index ? 'active' : ''}}" data-path="{{item.pagePath}}" data-index="{{index}}" bindtap="switchTab">
+      <view class="tab-icon-wrapper">
+        <view class="tab-icon {{item.icon}} {{selected === index ? 'active' : ''}}">
+          <view wx:if="{{item.icon === 'chat'}}" class="icon-chat">
+            <view class="chat-bubble"></view>
+            <view class="chat-dots">
+              <view class="dot"></view>
+              <view class="dot"></view>
+              <view class="dot"></view>
+            </view>
+          </view>
+          <view wx:if="{{item.icon === 'write'}}" class="icon-write">
+            <view class="write-paper"></view>
+            <view class="write-pen"></view>
+          </view>
+          <view wx:if="{{item.icon === 'profile'}}" class="icon-profile">
+            <view class="profile-head"></view>
+            <view class="profile-body"></view>
+          </view>
+        </view>
+        <view wx:if="{{selected === index}}" class="tab-indicator"></view>
+      </view>
+      <text class="tab-text">{{item.text}}</text>
+    </view>
+  </view>
+</view>

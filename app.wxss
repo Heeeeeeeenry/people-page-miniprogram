@@ -1,0 +1,112 @@
+/* app.wxss - 现代化全局样式 */
+page {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', sans-serif;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #1e293b;
+  font-size: 28rpx;
+  --safe-bottom: env(safe-area-inset-bottom);
+  
+  /* 现代化配色变量 */
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+  --secondary: #06b6d4;
+  --accent: #f472b6;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --border: #e2e8f0;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* 重置按钮样式 */
+button::after { border: none; }
+button { 
+  padding: 0; 
+  margin: 0; 
+  background: none; 
+  line-height: inherit;
+  font-family: inherit;
+}
+
+/* 通用动画 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* 通用类名 */
+.fade-in { animation: fadeIn 0.3s ease-out; }
+.slide-up { animation: slideUp 0.4s ease-out; }
+.scale-in { animation: scaleIn 0.3s ease-out; }
+
+/* 卡片通用样式 */
+.card {
+  background: var(--bg-primary);
+  border-radius: 24rpx;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2rpx);
+}
+
+/* 按钮通用样式 */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #fff;
+  border-radius: 48rpx;
+  font-weight: 600;
+  box-shadow: 0 8rpx 24rpx rgba(99, 102, 241, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
+  box-shadow: 0 4rpx 12rpx rgba(99, 102, 241, 0.25);
+}
+
+/* 输入框通用样式 */
+.input-modern {
+  background: var(--bg-tertiary);
+  border-radius: 16rpx;
+  border: 2rpx solid transparent;
+  transition: all 0.2s ease;
+}
+
+.input-modern:focus {
+  background: var(--bg-primary);
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 4rpx rgba(99, 102, 241, 0.1);
+}

@@ -1,0 +1,70 @@
+<!--pages/index/index.wxml-->
+<view class="page">
+  <!-- 顶部导航栏 -->
+  <view class="nav-header">
+    <view class="nav-title">AI 助手</view>
+    <view class="nav-subtitle">智能解答您的问题</view>
+  </view>
+
+  <!-- 消息列表 -->
+  <scroll-view 
+    class="msg-list" 
+    style="top: {{msgListTop}}px; bottom: {{msgListBottom}}px;"
+    scroll-y 
+    enhanced 
+    show-scrollbar="{{false}}" 
+    scroll-into-view="{{scrollToView}}" 
+    scroll-with-animation>
+    <view class="welcome-card" wx:if="{{messages.length === 0}}">
+      <view class="welcome-icon">🤖</view>
+      <view class="welcome-title">您好！我是智能助手</view>
+      <view class="welcome-desc">有什么可以帮您的吗？</view>
+      <view class="quick-actions">
+        <view class="quick-btn" bindtap="quickAsk" data-text="如何写信？">如何写信？</view>
+        <view class="quick-btn" bindtap="quickAsk" data-text="查看我的信件">查看我的信件</view>
+        <view class="quick-btn" bindtap="quickAsk" data-text="联系客服">联系客服</view>
+      </view>
+    </view>
+
+    <block wx:for="{{messages}}" wx:key="id">
+      <view class="msg {{item.role}}">
+        <view class="msg-avatar {{item.role}}">
+          <text wx:if="{{item.role === 'assistant'}}">🤖</text>
+          <text wx:else>👤</text>
+        </view>
+        <view class="msg-content">
+          <view class="msg-bubble {{item.role}}">
+            <text class="msg-text">{{item.content}}</text>
+          </view>
+          <view class="msg-time">{{item.time}}</view>
+        </view>
+      </view>
+    </block>
+
+    <view wx:if="{{loading}}" class="msg assistant">
+      <view class="msg-avatar assistant"><text>🤖</text></view>
+      <view class="msg-bubble assistant">
+        <view class="typing-indicator">
+          <view class="dot"></view><view class="dot"></view><view class="dot"></view>
+        </view>
+      </view>
+    </view>
+
+    <view id="msg-end" style="height: 20rpx"></view>
+  </scroll-view>
+
+  <!-- 输入栏 -->
+  <view class="input-bar" style="bottom: {{inputBarBottom}}px;">
+    <input class="input" 
+           value="{{inputValue}}" 
+           bindinput="onInput" 
+           placeholder="输入您的问题..." 
+           confirm-type="send" 
+           bindconfirm="sendMessage" 
+           disabled="{{loading}}"
+           adjust-position="{{false}}" />
+    <view class="send-btn {{loading || !inputValue ? 'send-btn-disabled' : ''}}" catchtap="sendMessage">
+      发送
+    </view>
+  </view>
+</view>

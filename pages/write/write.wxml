@@ -1,0 +1,85 @@
+<!--pages/write/write.wxml-->
+<view class="page">
+  <!-- 顶部导航栏 -->
+  <view class="nav-header">
+    <view class="nav-title">写信</view>
+    <view class="nav-subtitle">我们将认真处理您的每一份诉求</view>
+  </view>
+
+  <scroll-view class="scroll" scroll-y>
+    <!-- 基本信息卡片 -->
+    <view class="card slide-up">
+      <view class="card-header">
+        <view class="card-icon">📝</view>
+        <view class="card-title">基本信息</view>
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">
+          <text class="label-text">分类</text>
+          <text class="label-required">*</text>
+        </view>
+        <picker mode="multiSelector" range="{{categoryColumns}}" value="{{categoryIndex}}" bindchange="onCategoryChange" bindcolumnchange="onColumnChange">
+          <view class="picker-value {{displayCategory ? 'has-value' : ''}}">
+            <text class="picker-text">{{displayCategory || '请选择分类'}}</text>
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">
+          <text class="label-text">姓名</text>
+          <text class="label-required">*</text>
+        </view>
+        <input class="inp" value="{{form.citizen_name}}" data-field="citizen_name" bindinput="onInput" placeholder="请输入您的姓名" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">
+          <text class="label-text">手机号</text>
+          <text class="label-required">*</text>
+        </view>
+        <input class="inp" type="number" value="{{form.phone}}" data-field="phone" bindinput="onInput" placeholder="请输入手机号" maxlength="11" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">
+          <text class="label-text">身份证号</text>
+          <text class="label-optional">选填</text>
+        </view>
+        <input class="inp" type="idcard" value="{{form.id_card}}" data-field="id_card" bindinput="onInput" placeholder="请输入身份证号" />
+      </view>
+    </view>
+
+    <!-- 诉求内容卡片 -->
+    <view class="card slide-up" style="animation-delay: 0.1s;">
+      <view class="card-header">
+        <view class="card-icon">💬</view>
+        <view class="card-title">诉求内容</view>
+      </view>
+      <textarea class="textarea" value="{{form.content}}" data-field="content" bindinput="onInput" placeholder="请详细描述您的诉求，我们会尽快处理..." maxlength="2000" auto-height />
+      <view class="char-count">{{form.content ? form.content.length : 0}}/2000</view>
+    </view>
+
+    <!-- 提示信息 -->
+    <view class="tips">
+      <text class="tips-icon">💡</text>
+      <text class="tips-text">提交后我们会通过短信通知您处理进度</text>
+    </view>
+
+    <!-- 提交按钮 -->
+    <view class="submit-area">
+      <button class="submit-btn" bindtap="onSubmit" disabled="{{loading}}">
+        <view wx:if="{{!loading}}" class="btn-content">
+          <text class="btn-icon">📤</text>
+          <text>提交信件</text>
+        </view>
+        <view wx:else class="btn-loading">
+          <view class="spinner"></view>
+          <text>提交中...</text>
+        </view>
+      </button>
+    </view>
+  </scroll-view>
+</view>

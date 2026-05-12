@@ -11,7 +11,6 @@
     "navigationBarBackgroundColor": "#6366f1"
   },
   "style": "v2",
-  "componentFramework": "glass-easel",
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents",
   "tabBar": {

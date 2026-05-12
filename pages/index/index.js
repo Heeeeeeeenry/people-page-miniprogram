@@ -10,6 +10,7 @@ Page({
     messages: [],
     inputValue: '',
     loading: false,
+    envLabel: '',
     keyboardHeight: 0,
     msgListTop: 100,
     msgListBottom: 120,
@@ -27,7 +28,9 @@ Page({
   },
 
   onShow() {
-    this.setData({ loading: false, inputValue: '' })
+    const env = app.globalData.env || '?'
+    const url = app.globalData.baseUrl || ''
+    this.setData({ loading: false, inputValue: '', envLabel: env + ' | ' + url })
     if (!app.globalData.token) app.autoLogin()
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
@@ -107,6 +110,18 @@ Page({
 
   async initChat() {
     const defaultPrompt = '你是一个乐于助人的AI助手，请用中文回答用户的问题。'
+
+    // 等待环境探测完成
+    if (app.globalData.envReady) {
+      await app.globalData.envReady
+    }
+
+    // 探测失败（WiFi AP隔离）→ 不发起请求，显示离线提示
+    if (!app.globalData.baseUrl) {
+      this.addMessage('assistant', '⚠️ 无法连接后端（WiFi AP隔离）\n请用 Mac 热点或 DevTools 模拟器')
+      return
+    }
+
     try {
       const res = await getPrompt()
       const basePrompt = (res && res.prompt) || defaultPrompt
@@ -177,8 +192,9 @@ Page({
     try {
       await this.doChatAndProcess()
     } catch (e) {
-      console.error('Chat error:', e)
-      this.addMessage('assistant', '抱歉，网络异常，请重试。')
+      const errDetail = (e && (e.errMsg || e.message)) || JSON.stringify(e)
+      console.error('Chat error:', errDetail)
+      this.addMessage('assistant', '抱歉，网络异常，请重试。\n' + errDetail)
     }
     this.setData({ loading: false })
   },

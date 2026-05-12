@@ -3,13 +3,18 @@ const app = getApp()
 
 function request(url, method = 'GET', data = {}) {
   return new Promise((resolve, reject) => {
+    const baseUrl = app.globalData.baseUrl
+    if (!baseUrl) {
+      reject(new Error('baseUrl 未设置，请先连接后端'))
+      return
+    }
     const header = { 'Content-Type': 'application/json' }
     const token = app.globalData.token
     if (token) {
       header['Authorization'] = 'Bearer ' + token
     }
     wx.request({
-      url: app.globalData.baseUrl + url,
+      url: baseUrl + url,
       method,
       data,
       header,

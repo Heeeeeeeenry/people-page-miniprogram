@@ -26,12 +26,37 @@ Page({
     const formData = app.globalData.formData
     if (formData && Object.keys(formData).length > 0) {
       this.setData({ form: { ...this.data.form, ...formData } })
+      // 回填分类 picker
+      if (formData.cat1 && this.data.categories.length > 0) {
+        this.fillCategory(formData.cat1, formData.cat2, formData.cat3)
+      }
       app.globalData.formData = null
     }
-    // 设置 tabBar 选中状态
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 })
     }
+  },
+
+  // 根据分类名找到 picker 索引并回填
+  fillCategory(cat1, cat2, cat3) {
+    const tree = this.data.categories
+    let idx1 = 0, idx2 = 0, idx3 = 0
+    if (cat1) {
+      idx1 = tree.findIndex(c => c.name === cat1)
+      if (idx1 < 0) idx1 = 0
+    }
+    const l1Children = tree[idx1]?.children || []
+    if (cat2) {
+      idx2 = l1Children.findIndex(c => c.name === cat2)
+      if (idx2 < 0) idx2 = 0
+    }
+    const l2Children = l1Children[idx2]?.children || []
+    if (cat3) {
+      idx3 = l2Children.findIndex(c => c.name === cat3)
+      if (idx3 < 0) idx3 = 0
+    }
+    this.updatePickerRange(tree, [idx1, idx2, idx3])
+    this.setData({ categoryIndex: [idx1, idx2, idx3] })
   },
 
   async loadCategories() {

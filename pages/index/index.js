@@ -373,7 +373,10 @@ Page({
       citizen_name: draft['姓名'] || '',
       phone: draft['手机号'] || '',
       id_card: draft['身份证号'] || '',
-      content: draft['描述'] || ''
+      content: draft['描述'] || '',
+      cat1: draft['一级分类'] || '',
+      cat2: draft['二级分类'] || '',
+      cat3: draft['三级分类'] || '',
     }
   },
 

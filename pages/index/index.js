@@ -37,7 +37,7 @@ Page({
   },
 
   onHide() {
-    this.removeKeyboardListener()
+    // 保持键盘监听，不在这里移除。onShow 重新进入时可正常工作
   },
 
   onUnload() {

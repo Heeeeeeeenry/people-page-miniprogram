@@ -315,23 +315,26 @@ Page({
 
   extractDraft(content) {
     const draft = {}
+    // 先剥离 markdown 加粗标记，便于匹配
+    const clean = content.replace(/\*\*/g, '')
     const patterns = [
       { key: '姓名', regex: /(?:群众)?姓名[：:]\s*([^\n,，]+)/ },
-      { key: '手机号', regex: /(?:手机号|联系电话|电话)[：:]\s*(\d{11})/ },
-      { key: '身份证号', regex: /身份证(?:号)?[：:]\s*(\d{17}[\dXx])/ },
+      { key: '手机号', regex: /(?:手机号|联系电话|电话|联系方式)[：:]\s*(\d{11})/ },
+      { key: '身份证号', regex: /身份证(?:号|号码)?[：:]\s*(\d{17}[\dXx])/ },
       { key: '一级分类', regex: /一级分类[：:]\s*([^\n,，]+)/ },
       { key: '二级分类', regex: /二级分类[：:]\s*([^\n,，]+)/ },
       { key: '三级分类', regex: /三级分类[：:]\s*([^\n,，]+)/ },
-      { key: '描述', regex: /(?:诉求)?描述[：:]\s*([\s\S]+?)(?=\n\n|\n###|$)/ },
+      { key: '描述', regex: /(?:诉求)?描述[：:]\s*([\s\S]+?)(?=\n\n|\n###|\n\*\*|\n- |$)/ },
     ]
     for (const { key, regex } of patterns) {
-      const match = content.match(regex)
-      if (match) draft[key] = match[1].trim()
+      const match = clean.match(regex)
+      if (match) {
+        draft[key] = match[1].trim()
+      }
     }
-    // 兼容 markdown 表格
     const tableRowRegex = /\|\s*([^|]+)\s*\|\s*([^|]+)\s*(?:\|)?/g
     let tableMatch
-    while ((tableMatch = tableRowRegex.exec(content)) !== null) {
+    while ((tableMatch = tableRowRegex.exec(clean)) !== null) {
       const label = tableMatch[1].trim()
       const value = tableMatch[2].trim()
       if (!value || value === '-') continue

@@ -315,45 +315,44 @@ Page({
 
   extractDraft(content) {
     const draft = {}
-    // 先剥离 markdown 加粗标记，便于匹配
+    // 1. 从 AI 回复中提取分类信息
     const clean = content.replace(/\*\*/g, '')
-    const patterns = [
-      { key: '姓名', regex: /(?:群众)?姓名[：:]\s*([^\n,，]+)/ },
-      { key: '手机号', regex: /(?:手机号|联系电话|电话|联系方式)[：:]\s*(\d{11})/ },
-      { key: '身份证号', regex: /身份证(?:号|号码)?[：:]\s*(\d{17}[\dXx])/ },
-      { key: '一级分类', regex: /一级分类[：:]\s*([^\n,，]+)/ },
-      { key: '二级分类', regex: /二级分类[：:]\s*([^\n,，]+)/ },
-      { key: '三级分类', regex: /三级分类[：:]\s*([^\n,，]+)/ },
-      { key: '描述', regex: /(?:诉求)?描述[：:]\s*([\s\S]+?)(?=\n\n|\n###|\n\*\*|\n- |$)/ },
-    ]
-    for (const { key, regex } of patterns) {
-      const match = clean.match(regex)
-      if (match) {
-        draft[key] = match[1].trim()
-      }
-    }
-    const tableRowRegex = /\|\s*([^|]+)\s*\|\s*([^|]+)\s*(?:\|)?/g
-    let tableMatch
-    while ((tableMatch = tableRowRegex.exec(clean)) !== null) {
-      const label = tableMatch[1].trim()
-      const value = tableMatch[2].trim()
-      if (!value || value === '-') continue
-      if (label.includes('分类')) {
-        const parts = value.split('/').map(s => s.trim()).filter(Boolean)
-        if (parts.length >= 1 && !draft['一级分类']) draft['一级分类'] = parts[0]
-        if (parts.length >= 2 && !draft['二级分类']) draft['二级分类'] = parts[1]
-        if (parts.length >= 3 && !draft['三级分类']) draft['三级分类'] = parts[2]
-      } else if (label.includes('姓名') && !draft['姓名']) {
-        draft['姓名'] = value
-      } else if ((label.includes('手机') || label.includes('电话')) && !draft['手机号']) {
-        draft['手机号'] = value
-      } else if (label.includes('身份证') && !draft['身份证号']) {
-        draft['身份证号'] = value
-      } else if (label.includes('描述') || label.includes('诉求')) {
-        draft['描述'] = value
-      }
+    const cat1 = clean.match(/一级分类[：:]\s*([^\n,，]+)/)
+    if (cat1) draft['一级分类'] = cat1[1].trim()
+    const cat2 = clean.match(/二级分类[：:]\s*([^\n,，]+)/)
+    if (cat2) draft['二级分类'] = cat2[1].trim()
+    const cat3 = clean.match(/三级分类[：:]\s*([^\n,，]+)/)
+    if (cat3) draft['三级分类'] = cat3[1].trim()
+
+    // 2. 从用户原始消息中提取姓名/手机号/身份证号，描述用原文
+    const userMsg = this.getLastUserMessage()
+    if (userMsg) {
+      let name = userMsg.match(/群众\s*([^\s（(，,。.\d]{2,4})/)
+      if (!name) name = userMsg.match(/^([^\s（(，,。.\d]{2,4})/)
+      if (name) draft['姓名'] = name[1].trim()
+
+      const idMatch = userMsg.match(/(\d{17}[\dXx])/)
+      if (idMatch) draft['身份证号'] = idMatch[1]
+
+      const phoneMatch = userMsg.match(/(\d{11})/)
+      if (phoneMatch) draft['手机号'] = phoneMatch[1]
+
+      let desc = userMsg
+        .replace(/[（(][^）)]*[）)]/g, '')
+        .replace(/^[^反诉要建表根求说报称我其].*?[：:，,。.]\s*/, '')
+        .trim()
+      if (desc.length < 10) desc = userMsg.trim()
+      draft['描述'] = desc
     }
     return draft
+  },
+
+  getLastUserMessage() {
+    const msgs = this.data.messages
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user') return msgs[i].content
+    }
+    return ''
   },
 
   // ===================== 提交弹窗 =====================

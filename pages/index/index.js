@@ -430,5 +430,15 @@ Page({
     }
   },
 
+  onLongPressMsg(e) {
+    const content = e.currentTarget.dataset.content
+    if (content) {
+      wx.setClipboardData({
+        data: content,
+        success() { wx.showToast({ title: '已复制', icon: 'success', duration: 1500 }) }
+      })
+    }
+  },
+
   noop() {}
 })

@@ -29,8 +29,8 @@
           <text wx:else>👤</text>
         </view>
         <view class="msg-content">
-          <view class="msg-bubble {{item.role}}">
-            <text class="msg-text">{{item.content}}</text>
+          <view class="msg-bubble {{item.role}}" bindlongpress="onLongPressMsg" data-content="{{item.content}}">
+            <text class="msg-text" selectable="true">{{item.content}}</text>
           </view>
           <view class="msg-actions" wx:if="{{item.hasActions}}">
             <button 

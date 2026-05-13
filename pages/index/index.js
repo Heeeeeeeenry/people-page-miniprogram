@@ -304,12 +304,12 @@ Page({
   // ===================== AI 回复处理（与 Web 端一致）=====================
 
   processAIResponse(content) {
-    const submitMatch = content.match(/建议提交信件|生成信件|生成信件格式|信件已经为您准备好/)
+    const submitMatch = content.match(/建议提交信件|生成信件|提交|生成信件格式|信件已经为您准备好/)
     const hasData = content.includes('姓名') && content.includes('描述')
     const draft = this.extractDraft(content)
 
+    // 与 Web 端逻辑完全一致：先提取，再决定弹窗和按钮
     if (submitMatch) {
-      // 补全缺失字段（与 Web 端一致）
       if (!draft['姓名']) draft['姓名'] = (content.match(/群众姓名[|:：]\s*([^|\n]+)/) || content.match(/姓名[|:：]\s*([^|\n]+)/) || [''])[1]?.trim() || ''
       if (!draft['描述']) draft['描述'] = (content.match(/描述[|:：]\s*([^|\n]+(?:\n[^|\n]+)*)/) || [''])[1]?.trim() || ''
       this.setData({
@@ -323,17 +323,13 @@ Page({
       })
     }
 
-    if (draft && Object.keys(draft).length > 0) {
-      const actions = [{
-        label: '填写信件', type: 'fillForm', data: draft
-      }]
-      this.updateLastAssistantMsg(content, actions)
-    } else if (hasData) {
-      // 宽松检查：内容有姓名和描述但 regex 没提取到，也给按钮
-      const actions = [{
-        label: '填写信件', type: 'fillForm', data: draft
-      }]
-      this.updateLastAssistantMsg(content, actions)
+    if (submitMatch || hasData) {
+      if (draft && Object.keys(draft).length > 0) {
+        const actions = [{ label: '填写信件', type: 'fillForm', data: draft }]
+        this.updateLastAssistantMsg(content, actions)
+      } else {
+        this.addMessage('assistant', content)
+      }
     } else {
       this.addMessage('assistant', content)
     }

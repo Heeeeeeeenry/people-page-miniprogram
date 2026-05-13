@@ -304,32 +304,10 @@ Page({
   // ===================== AI 回复处理（与 Web 端一致）=====================
 
   processAIResponse(content) {
-    const submitMatch = content.match(/建议提交信件|生成信件|提交|生成信件格式|信件已经为您准备好/)
-    const hasData = content.includes('姓名') && content.includes('描述')
     const draft = this.extractDraft(content)
-
-    // 与 Web 端逻辑完全一致：先提取，再决定弹窗和按钮
-    if (submitMatch) {
-      if (!draft['姓名']) draft['姓名'] = (content.match(/群众姓名[|:：]\s*([^|\n]+)/) || content.match(/姓名[|:：]\s*([^|\n]+)/) || [''])[1]?.trim() || ''
-      if (!draft['描述']) draft['描述'] = (content.match(/描述[|:：]\s*([^|\n]+(?:\n[^|\n]+)*)/) || [''])[1]?.trim() || ''
-      this.setData({
-        showSubmitDialog: true,
-        submitDraft: draft,
-        draftName: draft['姓名'] || '（未填写）',
-        draftPhone: draft['手机号'] || '（未填写）',
-        draftIdCard: draft['身份证号'] || '（未填写）',
-        draftCategory: [draft['一级分类'], draft['二级分类'], draft['三级分类']].filter(Boolean).join(' / ') || '（未填写）',
-        draftDesc: draft['描述'] || '（未填写）'
-      })
-    }
-
-    if (submitMatch || hasData) {
-      if (draft && Object.keys(draft).length > 0) {
-        const actions = [{ label: '填写信件', type: 'fillForm', data: draft }]
-        this.updateLastAssistantMsg(content, actions)
-      } else {
-        this.addMessage('assistant', content)
-      }
+    if (draft && Object.keys(draft).length > 0) {
+      const actions = [{ label: '填写信件', type: 'fillForm', data: draft }]
+      this.updateLastAssistantMsg(content, actions)
     } else {
       this.addMessage('assistant', content)
     }
@@ -338,13 +316,13 @@ Page({
   extractDraft(content) {
     const draft = {}
     const patterns = [
-      { key: '姓名', regex: /姓名[：:]\s*([^\n,，]+)/ },
-      { key: '手机号', regex: /手机号?[：:]\s*(\d{11})/ },
-      { key: '身份证号', regex: /身份证[：:]\s*(\d{17}[\dXx])/ },
+      { key: '姓名', regex: /(?:群众)?姓名[：:]\s*([^\n,，]+)/ },
+      { key: '手机号', regex: /(?:手机号|联系电话|电话)[：:]\s*(\d{11})/ },
+      { key: '身份证号', regex: /身份证(?:号)?[：:]\s*(\d{17}[\dXx])/ },
       { key: '一级分类', regex: /一级分类[：:]\s*([^\n,，]+)/ },
       { key: '二级分类', regex: /二级分类[：:]\s*([^\n,，]+)/ },
       { key: '三级分类', regex: /三级分类[：:]\s*([^\n,，]+)/ },
-      { key: '描述', regex: /描述[：:]\s*([\s\S]+?)(?=\n\n|\n###|$)/ }
+      { key: '描述', regex: /(?:诉求)?描述[：:]\s*([\s\S]+?)(?=\n\n|\n###|$)/ },
     ]
     for (const { key, regex } of patterns) {
       const match = content.match(regex)

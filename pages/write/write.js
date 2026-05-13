@@ -21,10 +21,16 @@ Page({
   },
 
   onLoad() {
-    this.loadCategories()
+    this.initPage()
+  },
+
+  async initPage() {
+    if (!app.globalData.token) await app.autoLogin()
+    await this.loadCategories()
   },
 
   onShow() {
+    if (!app.globalData.token) app.autoLogin()
     const formData = app.globalData.formData
     if (formData && Object.keys(formData).length > 0) {
       this.setData({ form: { ...this.data.form, citizen_name: formData.citizen_name || '', phone: formData.phone || '', id_card: formData.id_card || '', content: formData.content || '' } })
@@ -42,15 +48,16 @@ Page({
       const res = await getCategories()
       if (res && res.data) {
         this.setData({ categories: res.data })
-        // 先初始化为索引0
         this.updatePickerRange(res.data, [0, 0, 0])
-        // 如果有待回填的分类，现在填
         if (this._pendingCats) {
           this.fillCategory(this._pendingCats.cat1, this._pendingCats.cat2, this._pendingCats.cat3)
           this._pendingCats = null
         }
       }
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error('加载分类失败', e)
+      wx.showToast({ title: '加载分类失败，请重试', icon: 'none' })
+    }
   },
 
   fillCategory(cat1, cat2, cat3) {

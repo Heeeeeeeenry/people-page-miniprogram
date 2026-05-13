@@ -1,10 +1,12 @@
 // pages/write/write.js
 const app = getApp()
-import { submitLetter, getCategories } from '../../utils/api'
+import { submitLetter, getCategories, classifyLetter } from '../../utils/api'
 
 Page({
   data: {
     loading: false,
+    aiLoading: false,
+    aiSuggestion: null,
     categories: [],
     categoryIndex: [0, 0, 0],
     categoryColumns: [[], [], []],
@@ -25,11 +27,9 @@ Page({
   onShow() {
     const formData = app.globalData.formData
     if (formData && Object.keys(formData).length > 0) {
-      this.setData({ form: { ...this.data.form, ...formData } })
-      // 回填分类 picker
-      if (formData.cat1 && this.data.categories.length > 0) {
-        this.fillCategory(formData.cat1, formData.cat2, formData.cat3)
-      }
+      this.setData({ form: { ...this.data.form, citizen_name: formData.citizen_name || '', phone: formData.phone || '', id_card: formData.id_card || '', content: formData.content || '' } })
+      // 等分类加载完再回填
+      this._pendingCats = { cat1: formData.cat1, cat2: formData.cat2, cat3: formData.cat3 }
       app.globalData.formData = null
     }
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
@@ -37,36 +37,71 @@ Page({
     }
   },
 
-  // 根据分类名找到 picker 索引并回填
-  fillCategory(cat1, cat2, cat3) {
-    const tree = this.data.categories
-    let idx1 = 0, idx2 = 0, idx3 = 0
-    if (cat1) {
-      idx1 = tree.findIndex(c => c.name === cat1)
-      if (idx1 < 0) idx1 = 0
-    }
-    const l1Children = tree[idx1]?.children || []
-    if (cat2) {
-      idx2 = l1Children.findIndex(c => c.name === cat2)
-      if (idx2 < 0) idx2 = 0
-    }
-    const l2Children = l1Children[idx2]?.children || []
-    if (cat3) {
-      idx3 = l2Children.findIndex(c => c.name === cat3)
-      if (idx3 < 0) idx3 = 0
-    }
-    this.updatePickerRange(tree, [idx1, idx2, idx3])
-    this.setData({ categoryIndex: [idx1, idx2, idx3] })
-  },
-
   async loadCategories() {
     try {
       const res = await getCategories()
       if (res && res.data) {
         this.setData({ categories: res.data })
+        // 先初始化为索引0
         this.updatePickerRange(res.data, [0, 0, 0])
+        // 如果有待回填的分类，现在填
+        if (this._pendingCats) {
+          this.fillCategory(this._pendingCats.cat1, this._pendingCats.cat2, this._pendingCats.cat3)
+          this._pendingCats = null
+        }
       }
     } catch (e) { console.error(e) }
+  },
+
+  fillCategory(cat1, cat2, cat3) {
+    const tree = this.data.categories
+    if (!tree || tree.length === 0) return
+    let idx1 = 0, idx2 = 0, idx3 = 0
+    if (cat1) {
+      const i = tree.findIndex(c => c.name === cat1)
+      if (i >= 0) idx1 = i
+    }
+    const l1Children = tree[idx1]?.children || []
+    if (cat2) {
+      const i = l1Children.findIndex(c => c.name === cat2)
+      if (i >= 0) idx2 = i
+    }
+    const l2Children = l1Children[idx2]?.children || []
+    if (cat3) {
+      const i = l2Children.findIndex(c => c.name === cat3)
+      if (i >= 0) idx3 = i
+    }
+    this.updatePickerRange(tree, [idx1, idx2, idx3])
+    this.setData({ categoryIndex: [idx1, idx2, idx3] })
+  },
+
+  // ===== AI 一键分类 =====
+  async doAIClassify() {
+    const content = this.data.form.content
+    if (!content || !content.trim()) {
+      wx.showToast({ title: '请先填写诉求内容', icon: 'none' })
+      return
+    }
+    this.setData({ aiLoading: true, aiSuggestion: null })
+    try {
+      const res = await classifyLetter({ 描述: content.trim() })
+      const data = res?.data || res
+      if (data) {
+        this.setData({ aiSuggestion: data })
+      } else {
+        wx.showToast({ title: '未识别到分类', icon: 'none' })
+      }
+    } catch (e) {
+      wx.showToast({ title: 'AI分类失败', icon: 'none' })
+    }
+    this.setData({ aiLoading: false })
+  },
+
+  acceptAIClassify() {
+    const s = this.data.aiSuggestion
+    if (!s) return
+    this.fillCategory(s['一级分类'] || '', s['二级分类'] || '', s['三级分类'] || '')
+    this.setData({ aiSuggestion: null })
   },
 
   updatePickerRange(tree, index) {
@@ -99,10 +134,7 @@ Page({
     this.updatePickerRange(this.data.categories, e.detail.value)
   },
 
-  onColumnChange(e) {
-    // 微信的 columnchange 只提供列和值，不提供完整索引
-    // 简化处理：不做级联实时更新，在 change 时统一更新
-  },
+  onColumnChange(e) {},
 
   onInput(e) {
     const field = e.currentTarget.dataset.field

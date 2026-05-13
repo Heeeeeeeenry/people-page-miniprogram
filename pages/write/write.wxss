@@ -282,3 +282,40 @@
 .slide-up {
   animation: slideUp 0.5s ease-out;
 }
+
+/* AI 分类 */
+.ai-classify-btn {
+  margin-left: auto;
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border-radius: 20rpx;
+  border: none;
+  line-height: 1.8;
+}
+.ai-classify-btn.loading { opacity: 0.6; }
+
+.ai-suggest-box {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 12rpx;
+  padding: 10rpx 16rpx;
+  background: #f0f0ff;
+  border-radius: 10rpx;
+  border: 1rpx solid #d4d4f8;
+}
+.ai-suggest-text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #4c1d95;
+}
+.ai-accept-btn {
+  font-size: 22rpx;
+  padding: 4rpx 20rpx;
+  background: #10b981;
+  color: #fff;
+  border-radius: 14rpx;
+  border: none;
+}

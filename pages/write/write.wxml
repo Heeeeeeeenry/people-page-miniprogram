@@ -18,6 +18,9 @@
         <view class="form-label">
           <text class="label-text">分类</text>
           <text class="label-required">*</text>
+          <button wx:if="{{form.content}}" class="ai-classify-btn {{aiLoading ? 'loading' : ''}}" bindtap="doAIClassify" disabled="{{aiLoading}}" size="mini">
+            {{aiLoading ? '分析中...' : '🤖 AI分类'}}
+          </button>
         </view>
         <picker mode="multiSelector" range="{{categoryColumns}}" value="{{categoryIndex}}" bindchange="onCategoryChange" bindcolumnchange="onColumnChange">
           <view class="picker-value {{displayCategory ? 'has-value' : ''}}">
@@ -25,6 +28,10 @@
             <text class="picker-arrow">›</text>
           </view>
         </picker>
+        <view wx:if="{{aiSuggestion}}" class="ai-suggest-box">
+          <text class="ai-suggest-text">{{aiSuggestion['一级分类'] || ''}}{{aiSuggestion['二级分类'] ? ' / ' + aiSuggestion['二级分类'] : ''}}{{aiSuggestion['三级分类'] ? ' / ' + aiSuggestion['三级分类'] : ''}}</text>
+          <button class="ai-accept-btn" bindtap="acceptAIClassify" size="mini">采纳</button>
+        </view>
       </view>
 
       <view class="form-item">

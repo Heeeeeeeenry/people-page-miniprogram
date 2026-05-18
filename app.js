@@ -104,38 +104,67 @@ App({
   },
 
   async autoLogin() {
+    // 已有 token → 直接返回
     if (this.globalData.token) return
 
-    try {
-      const res = await new Promise((resolve, reject) => {
-        wx.login({ success: resolve, fail: reject })
-      })
-      if (!res.code) return
-
-      const loginRes = await new Promise((resolve, reject) => {
-        wx.request({
-          url: this.globalData.baseUrl + '/auth/wechat/login',
-          method: 'POST',
-          header: { 'Content-Type': 'application/json' },
-          data: { code: res.code },
-          success: resolve,
-          fail: reject
-        })
-      })
-
-      if (loginRes.statusCode === 200 && loginRes.data && loginRes.data.token) {
-        const { token, user } = loginRes.data
-        this.globalData.token = token
-        this.globalData.user = user
-        wx.setStorageSync('token', token)
-        wx.setStorageSync('user', JSON.stringify(user))
-      } else if (loginRes.data && loginRes.data.need_bind_phone) {
-        this.globalData.wxOpenid = loginRes.data.wx_openid
-        this.globalData.needBindPhone = true
+    // baseUrl 未就绪 → 等探测完成
+    if (!this.globalData.baseUrl) {
+      if (this.globalData.envReady) await this.globalData.envReady
+      if (!this.globalData.baseUrl) {
+        console.error('[Login] baseUrl 为空，放弃登录')
+        return
       }
-    } catch (e) {
-      console.error('自动登录失败', e)
     }
+
+    // 防并发：多个页面同时调用时共用同一个 Promise
+    if (this._loginPromise) return this._loginPromise
+
+    this._loginPromise = (async () => {
+      try {
+        const res = await new Promise((resolve, reject) => {
+          wx.login({ success: resolve, fail: reject })
+        })
+        if (!res.code) return
+
+        // 获取本小程序 appid，传给后端匹配对应的 secret
+        const accountInfo = wx.getAccountInfoSync ? wx.getAccountInfoSync() : null
+        const appid = (accountInfo && accountInfo.miniProgram && accountInfo.miniProgram.appId) || ''
+
+        const loginRes = await new Promise((resolve, reject) => {
+          wx.request({
+            url: this.globalData.baseUrl + '/auth/wechat/login',
+            method: 'POST',
+            header: { 'Content-Type': 'application/json' },
+            data: { code: res.code, appid: appid },
+            success: resolve,
+            fail: reject
+          })
+        })
+
+        if (loginRes.statusCode === 200 && loginRes.data && loginRes.data.token) {
+          const { token, user } = loginRes.data
+          this.globalData.token = token
+          this.globalData.user = user
+          wx.setStorageSync('token', token)
+          wx.setStorageSync('user', JSON.stringify(user))
+          console.log('[Login] 成功, token:', token.substring(0, 20) + '...')
+        } else if (loginRes.data && loginRes.data.need_bind_phone) {
+          this.globalData.wxOpenid = loginRes.data.wx_openid
+          this.globalData.needBindPhone = true
+          console.log('[Login] 需要绑定手机号, openid:', loginRes.data.wx_openid)
+        } else {
+          console.error('[Login] 异常响应:', loginRes.statusCode, JSON.stringify(loginRes.data))
+          wx.showToast({ title: '登录失败: ' + (loginRes.data?.message || loginRes.statusCode), icon: 'none', duration: 3000 })
+        }
+      } catch (e) {
+        console.error('自动登录失败', e)
+        wx.showToast({ title: '登录失败: ' + (e.errMsg || e.message || '网络错误'), icon: 'none', duration: 3000 })
+      } finally {
+        this._loginPromise = null
+      }
+    })()
+
+    return this._loginPromise
   },
 
   globalData: {

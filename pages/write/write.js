@@ -20,7 +20,11 @@ Page({
     }
   },
 
-  onLoad() {
+  async onLoad() {
+    // 等待环境探测完成
+    if (app.globalData.envReady) {
+      await app.globalData.envReady
+    }
     this.initPage()
   },
 

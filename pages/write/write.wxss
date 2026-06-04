@@ -319,3 +319,213 @@
   border-radius: 14rpx;
   border: none;
 }
+
+/* ========== 附件卡片 ========== */
+
+.card-tip {
+  font-size: 22rpx;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+/* 文件网格 - 3列布局 */
+.file-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+/* 单个文件项 */
+.file-item {
+  width: calc((100% - 32rpx) / 3);
+  background: #f8fafc;
+  border-radius: 16rpx;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+.file-item.uploaded {
+  border: 2rpx solid #10b981;
+}
+
+/* 删除按钮 */
+.file-delete {
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
+  width: 40rpx;
+  height: 40rpx;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  line-height: 1;
+}
+
+.file-delete:active {
+  background: rgba(239, 68, 68, 0.8);
+}
+
+/* 进度条 */
+.file-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6rpx;
+  background: rgba(0,0,0,0.1);
+  z-index: 5;
+}
+
+.file-progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 0 3rpx 3rpx 0;
+  transition: width 0.3s ease;
+}
+
+.file-progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  z-index: 6;
+}
+
+/* 缩略图 */
+.file-thumb {
+  width: 100%;
+  height: 160rpx;
+  display: block;
+  background: #e2e8f0;
+}
+
+/* 文件图标（非图片/视频） */
+.file-icon-box {
+  width: 100%;
+  height: 160rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+}
+
+.file-icon-emoji {
+  font-size: 56rpx;
+}
+
+/* 文件名 */
+.file-name {
+  padding: 8rpx 12rpx 2rpx;
+  font-size: 22rpx;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+/* 文件大小 */
+.file-size {
+  padding: 0 12rpx 4rpx;
+  font-size: 20rpx;
+  color: #9ca3af;
+}
+
+/* 上传状态标签 */
+.file-status {
+  margin: 4rpx 12rpx 10rpx;
+  font-size: 20rpx;
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
+  display: inline-block;
+}
+
+.uploaded-tag {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.uploading-tag {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.pending-tag {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* 空状态 */
+.file-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 0 24rpx;
+  gap: 12rpx;
+}
+
+.file-empty-icon {
+  font-size: 56rpx;
+  opacity: 0.6;
+}
+
+.file-empty-text {
+  font-size: 26rpx;
+  color: #9ca3af;
+}
+
+/* 添加按钮 */
+.file-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  height: 80rpx;
+  border-radius: 16rpx;
+  border: 2rpx dashed #c7d2fe;
+  background: #f5f3ff;
+  margin-bottom: 12rpx;
+  transition: all 0.2s ease;
+}
+
+.file-add-btn:active {
+  background: #ede9fe;
+  border-color: #a5b4fc;
+  transform: scale(0.98);
+}
+
+.file-add-icon {
+  font-size: 36rpx;
+  font-weight: 300;
+  color: #6366f1;
+  line-height: 1;
+}
+
+.file-add-text {
+  font-size: 28rpx;
+  color: #6366f1;
+  font-weight: 500;
+}
+
+/* 上传提示 */
+.file-upload-hint {
+  text-align: center;
+  font-size: 22rpx;
+  color: #9ca3af;
+  padding-top: 4rpx;
+}

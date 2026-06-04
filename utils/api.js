@@ -93,3 +93,50 @@ export function getCategories() {
 export function classifyLetter(data) {
   return request('/letter/classify', 'POST', data)
 }
+
+// ===== 文件上传 =====
+
+/**
+ * 上传文件 - 使用 wx.uploadFile
+ * @param {string} filePath - 本地文件路径
+ * @param {Function} onProgress - 进度回调
+ * @returns {Promise}
+ */
+export function uploadFileRequest(filePath, onProgress) {
+  return new Promise((resolve, reject) => {
+    const baseUrl = app.globalData.baseUrl
+    if (!baseUrl) {
+      reject(new Error('baseUrl 未设置'))
+      return
+    }
+    const header = {}
+    const token = app.globalData.token
+    if (token) {
+      header['Authorization'] = 'Bearer ' + token
+    }
+    const uploadTask = wx.uploadFile({
+      url: baseUrl + '/api/upload',
+      filePath,
+      name: 'file',
+      header,
+      success(res) {
+        try {
+          const data = JSON.parse(res.data)
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(data)
+          } else {
+            reject(new Error(data?.error || data?.message || '上传失败'))
+          }
+        } catch (e) {
+          reject(new Error('解析上传结果失败'))
+        }
+      },
+      fail(err) { reject(err) }
+    })
+    if (onProgress && uploadTask.onProgressUpdate) {
+      uploadTask.onProgressUpdate((res) => {
+        onProgress(res.progress)
+      })
+    }
+  })
+}

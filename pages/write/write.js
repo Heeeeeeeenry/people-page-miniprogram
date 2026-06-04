@@ -1,6 +1,7 @@
 // pages/write/write.js
 const app = getApp()
-import { submitLetter, getCategories, classifyLetter } from '../../utils/api'
+import { submitLetter, getCategories, classifyLetter, uploadFileRequest } from '../../utils/api'
+import { getExtFromPath, getFileIcon, formatSize } from '../../utils/upload'
 
 Page({
   data: {
@@ -12,6 +13,8 @@ Page({
     categoryColumns: [[], [], []],
     categoryIds: [[], [], []],
     displayCategory: '',
+    files: [],
+    uploadingFiles: {},
     form: {
       citizen_name: '',
       phone: '',
@@ -154,8 +157,164 @@ Page({
     this.setData({ form })
   },
 
+  // ===== 文件选择与上传 =====
+
+  /**
+   * 添加附件：优先使用 wx.chooseMedia（图片+视频），
+   * 其他文件类型通过 wx.chooseMessageFile 选择
+   */
+  chooseFile() {
+    const that = this
+    wx.showActionSheet({
+      itemList: ['拍摄/选择图片或视频', '从聊天文件选择'],
+      success(res) {
+        if (res.tapIndex === 0) {
+          that.chooseMedia()
+        } else if (res.tapIndex === 1) {
+          that.chooseMessageFile()
+        }
+      }
+    })
+  },
+
+  chooseMedia() {
+    const that = this
+    wx.chooseMedia({
+      count: 9,
+      mediaType: ['image', 'video'],
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
+      maxDuration: 60,
+      success(res) {
+        const newFiles = res.tempFiles.map(f => {
+          const ext = getExtFromPath(f.tempFilePath) || (f.fileType === 'video' ? 'mp4' : 'jpg')
+          return {
+            path: f.tempFilePath,
+            name: f.tempFilePath.split('/').pop() || 'file.' + ext,
+            ext: ext,
+            size: f.size || 0,
+            sizeText: formatSize(f.size || 0),
+            type: f.fileType === 'video' ? 'video' : 'image',
+            icon: f.fileType === 'video' ? '🎬' : '🖼️',
+            uploaded: false,
+            url: '',
+            progress: 0
+          }
+        })
+        that.setData({ files: [...that.data.files, ...newFiles] })
+      },
+      fail(err) {
+        if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          wx.showToast({ title: '选择文件失败', icon: 'none' })
+        }
+      }
+    })
+  },
+
+  chooseMessageFile() {
+    const that = this
+    wx.chooseMessageFile({
+      count: 9,
+      type: 'all',
+      success(res) {
+        const newFiles = res.tempFiles.map(f => {
+          const ext = getExtFromPath(f.path) || getExtFromPath(f.name)
+          return {
+            path: f.path,
+            name: f.name,
+            ext: ext,
+            size: f.size || 0,
+            sizeText: formatSize(f.size || 0),
+            type: getExtFromPath(f.path) || getExtFromPath(f.name),
+            icon: getFileIcon(ext),
+            uploaded: false,
+            url: '',
+            progress: 0
+          }
+        })
+        that.setData({ files: [...that.data.files, ...newFiles] })
+      },
+      fail(err) {
+        if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          wx.showToast({ title: '选择文件失败', icon: 'none' })
+        }
+      }
+    })
+  },
+
+  /**
+   * 删除已选文件
+   */
+  removeFile(e) {
+    const index = e.currentTarget.dataset.index
+    const files = [...this.data.files]
+    const removing = files[index]
+    // 如果正在上传中，尝试取消（微信暂不支持主动取消）
+    files.splice(index, 1)
+    const uploadingFiles = { ...this.data.uploadingFiles }
+    if (removing && removing.path) {
+      delete uploadingFiles[removing.path]
+    }
+    this.setData({ files, uploadingFiles })
+  },
+
+  /**
+   * 上传单个文件
+   */
+  async uploadSingleFile(file, index) {
+    if (file.uploaded && file.url) return file
+
+    const uploadingFiles = { ...this.data.uploadingFiles }
+    uploadingFiles[file.path] = 0
+    this.setData({ uploadingFiles })
+
+    try {
+      const result = await uploadFileRequest(file.path, (progress) => {
+        const uf = { ...this.data.uploadingFiles }
+        uf[file.path] = progress
+        this.setData({ uploadingFiles: uf })
+
+        // 同步更新 files 中的进度
+        const files = [...this.data.files]
+        const fi = files.findIndex(f => f.path === file.path)
+        if (fi >= 0) {
+          files[fi].progress = progress
+          this.setData({ files })
+        }
+      })
+
+      const files = [...this.data.files]
+      const fi = files.findIndex(f => f.path === file.path)
+      if (fi >= 0) {
+        files[fi].uploaded = true
+        files[fi].url = result.url || result.data?.url || ''
+        files[fi].progress = 100
+      }
+
+      const uf = { ...this.data.uploadingFiles }
+      delete uf[file.path]
+      this.setData({ files, uploadingFiles: uf })
+
+      return files[fi]
+    } catch (e) {
+      const uf = { ...this.data.uploadingFiles }
+      delete uf[file.path]
+      this.setData({ uploadingFiles: uf })
+      throw e
+    }
+  },
+
+  /**
+   * 获取已上传文件的 URL 列表
+   */
+  getUploadedUrls() {
+    return this.data.files
+      .filter(f => f.uploaded && f.url)
+      .map(f => f.url)
+  },
+
   async onSubmit() {
-    const { form, categoryIndex, categoryIds } = this.data
+    const { form, categoryIndex, categoryIds, files } = this.data
     if (!form.citizen_name) {
       wx.showToast({ title: '请输入姓名', icon: 'none' })
       return
@@ -171,6 +330,20 @@ Page({
 
     this.setData({ loading: true })
     try {
+      // 1. 先上传所有未上传的文件
+      const uploadPromises = files
+        .filter(f => !f.uploaded || !f.url)
+        .map((f, i) => this.uploadSingleFile(f, i))
+
+      if (uploadPromises.length > 0) {
+        wx.showLoading({ title: '上传附件中...' })
+        await Promise.all(uploadPromises)
+        wx.hideLoading()
+      }
+
+      // 2. 收集已上传的文件 URL
+      const uploadedUrls = this.getUploadedUrls()
+
       const categoryId = categoryIds[2]?.[categoryIndex[2]]
         || categoryIds[1]?.[categoryIndex[1]]
         || categoryIds[0]?.[categoryIndex[0]]
@@ -184,16 +357,24 @@ Page({
         category_id: categoryId
       }
 
+      // 如果有附件，带上文件 URL
+      if (uploadedUrls.length > 0) {
+        data.file_urls = uploadedUrls
+      }
+
       const res = await submitLetter(data)
       if (res && (res.success || res.message)) {
         wx.showToast({ title: '提交成功', icon: 'success' })
         this.setData({
-          form: { citizen_name: '', phone: '', id_card: '', content: '' }
+          form: { citizen_name: '', phone: '', id_card: '', content: '' },
+          files: [],
+          uploadingFiles: {}
         })
       } else {
         wx.showToast({ title: res.error || '提交失败', icon: 'none' })
       }
     } catch (e) {
+      wx.hideLoading()
       wx.showToast({ title: '提交失败，请重试', icon: 'none' })
     }
     this.setData({ loading: false })

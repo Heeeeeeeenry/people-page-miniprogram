@@ -69,6 +69,62 @@
       <view class="char-count">{{form.content ? form.content.length : 0}}/2000</view>
     </view>
 
+    <!-- 附件卡片 -->
+    <view class="card slide-up" style="animation-delay: 0.15s;">
+      <view class="card-header">
+        <view class="card-icon">📎</view>
+        <view class="card-title">附件</view>
+        <view class="card-tip">支持图片、视频、文档</view>
+      </view>
+
+      <view class="file-grid" wx:if="{{files.length > 0}}">
+        <view class="file-item {{file.uploaded ? 'uploaded' : ''}}" wx:for="{{files}}" wx:for-item="file" wx:for-index="i" wx:key="path">
+          <!-- 删除按钮 -->
+          <view class="file-delete" data-index="{{i}}" catchtap="removeFile">×</view>
+
+          <!-- 上传进度条 -->
+          <view class="file-progress-bar" wx:if="{{!file.uploaded && file.progress > 0}}">
+            <view class="file-progress-fill" style="width: {{file.progress}}%;"></view>
+          </view>
+          <view class="file-progress-text" wx:if="{{!file.uploaded && file.progress > 0}}">{{file.progress}}%</view>
+
+          <!-- 图片/视频缩略图 -->
+          <image wx:if="{{file.type === 'image'}}" class="file-thumb" src="{{file.path}}" mode="aspectFill" />
+          <video wx:elif="{{file.type === 'video'}}" class="file-thumb" src="{{file.path}}"></video>
+          <!-- 其他类型图标 -->
+          <view wx:else class="file-icon-box">
+            <text class="file-icon-emoji">{{file.icon}}</text>
+          </view>
+
+          <!-- 文件名 -->
+          <view class="file-name">{{file.name}}</view>
+          <view class="file-size">{{file.sizeText}}</view>
+
+          <!-- 上传状态 -->
+          <view class="file-status uploaded-tag" wx:if="{{file.uploaded}}">✓ 已上传</view>
+          <view class="file-status uploading-tag" wx:elif="{{file.progress > 0}}">上传中...</view>
+          <view class="file-status pending-tag" wx:else>待上传</view>
+        </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view class="file-empty" wx:if="{{files.length === 0}}">
+        <text class="file-empty-icon">📂</text>
+        <text class="file-empty-text">添加照片、文件等附件</text>
+      </view>
+
+      <!-- 添加按钮 -->
+      <view class="file-add-btn" bindtap="chooseFile">
+        <text class="file-add-icon">+</text>
+        <text class="file-add-text">添加附件</text>
+      </view>
+
+      <!-- 批量上传提示 -->
+      <view class="file-upload-hint" wx:if="{{files.length > 0}}">
+        <text>共 {{files.length}} 个文件，提交时将自动上传</text>
+      </view>
+    </view>
+
     <!-- 提示信息 -->
     <view class="tips">
       <text class="tips-icon">💡</text>
